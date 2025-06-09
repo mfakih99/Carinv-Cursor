@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMockVehicleById, updateMockVehicle, deleteMockVehicle } from '@/lib/mockData'
+import prisma from '@/lib/prisma'
 
 // GET single vehicle by ID
 export async function GET(
@@ -8,7 +8,61 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const vehicle = getMockVehicleById(id)
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        expenses: {
+          include: {
+            user: {
+              select: {
+                name: true
+              }
+            }
+          },
+          orderBy: { date: 'desc' }
+        },
+        notes: {
+          include: {
+            user: {
+              select: {
+                name: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        documents: {
+          include: {
+            uploadedBy: {
+              select: {
+                name: true
+              }
+            }
+          },
+          orderBy: { uploadedAt: 'desc' }
+        },
+        photos: {
+          orderBy: { order: 'asc' }
+        },
+        customFieldValues: {
+          include: {
+            field: true
+          }
+        },
+        sales: {
+          include: {
+            customer: true
+          }
+        }
+      }
+    })
 
     if (!vehicle) {
       return NextResponse.json(
@@ -56,14 +110,10 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
     
-    const vehicle = updateMockVehicle(id, body)
-    
-    if (!vehicle) {
-      return NextResponse.json(
-        { error: 'Vehicle not found' },
-        { status: 404 }
-      )
-    }
+    const vehicle = await prisma.vehicle.update({
+      where: { id },
+      data: body
+    })
     
     return NextResponse.json(vehicle)
   } catch (error) {
@@ -82,14 +132,9 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const success = deleteMockVehicle(id)
-    
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Vehicle not found' },
-        { status: 404 }
-      )
-    }
+    await prisma.vehicle.delete({
+      where: { id }
+    })
     
     return NextResponse.json({ success: true })
   } catch (error) {
