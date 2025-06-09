@@ -34,6 +34,15 @@ import {
 import Link from 'next/link'
 import { use, useState } from 'react'
 
+// Global custom field definitions - in real app, this would come from database/settings
+const globalCustomFields = [
+  { id: '1', name: 'Previous Owner', type: 'text', required: false },
+  { id: '2', name: 'Warranty Expires', type: 'date', required: false },
+  { id: '3', name: 'Has Service Records', type: 'boolean', required: false },
+  { id: '4', name: 'Number of Keys', type: 'number', required: false },
+  { id: '5', name: 'Vehicle Source', type: 'select', required: true, options: ['Auction', 'Trade-In', 'Private Sale', 'Dealer'] },
+]
+
 // Mock data - will be replaced with real database query
 const vehicleData = {
   id: '1',
@@ -88,14 +97,14 @@ const vehicleData = {
     { id: '3', url: '/placeholder-car-3.jpg', caption: 'Interior' },
   ],
   
-  // Custom fields
-  customFields: [
-    { id: '1', name: 'Previous Owner', type: 'text', value: 'Private Seller', required: false },
-    { id: '2', name: 'Warranty Expires', type: 'date', value: '2026-01-15', required: false },
-    { id: '3', name: 'Has Service Records', type: 'boolean', value: 'true', required: false },
-    { id: '4', name: 'Number of Keys', type: 'number', value: '2', required: false },
-    { id: '5', name: 'Vehicle Source', type: 'select', value: 'Auction', options: ['Auction', 'Trade-In', 'Private Sale', 'Dealer'], required: true },
-  ]
+  // Custom field values (only values, not definitions)
+  customFieldValues: {
+    '1': 'Private Seller',
+    '2': '2026-01-15',
+    '3': 'true',
+    '4': '2',
+    '5': 'Auction'
+  } as Record<string, string>
 }
 
 // Expense categories
@@ -115,6 +124,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   // In real app, fetch vehicle data using params.id
   const { id } = use(params)
   
+  // State for custom fields (in real app, would be fetched from global settings)
+  const [customFields, setCustomFields] = useState(globalCustomFields)
+  
   // State for edit mode
   const [isEditMode, setIsEditMode] = useState(false)
   const [editedData, setEditedData] = useState(vehicleData)
@@ -124,6 +136,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const [showAddNoteModal, setShowAddNoteModal] = useState(false)
   const [showAddPhotoModal, setShowAddPhotoModal] = useState(false)
   const [showAddCustomFieldModal, setShowAddCustomFieldModal] = useState(false)
+  const [showManageFieldsModal, setShowManageFieldsModal] = useState(false)
   
   // State for new expense/note forms
   const [newExpense, setNewExpense] = useState({
@@ -334,7 +347,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
   
-  // Add new custom field
+  // Add new custom field (global)
   const handleAddCustomField = () => {
     if (!newCustomField.name.trim()) {
       alert('Please enter a field name')
@@ -345,14 +358,21 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       id: Date.now().toString(),
       name: newCustomField.name,
       type: newCustomField.type,
-      value: newCustomField.type === 'boolean' ? 'false' : '',
       required: newCustomField.required,
       options: newCustomField.type === 'select' ? newCustomField.options.filter(o => o.trim()) : undefined
     }
     
+    // Add to global custom fields
+    setCustomFields(prev => [...prev, field])
+    
+    // Initialize value for all vehicles (in real app, this would be an API call)
+    // For this vehicle, initialize the value
     setEditedData(prev => ({
       ...prev,
-      customFields: [...(prev.customFields || []), field]
+      customFieldValues: {
+        ...prev.customFieldValues,
+        [field.id]: field.type === 'boolean' ? 'false' : ''
+      }
     }))
     
     // Reset form and close modal
@@ -364,29 +384,37 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     })
     setShowAddCustomFieldModal(false)
     
-    // Auto-enable edit mode if not already in it
-    if (!isEditMode) {
-      setIsEditMode(true)
-    }
+    // Show success message
+    alert(`Custom field "${field.name}" has been added to all vehicles`)
   }
   
-  // Delete custom field
+  // Delete custom field (global)
   const handleDeleteCustomField = (fieldId: string) => {
-    if (confirm('Delete this custom field?')) {
-      setEditedData(prev => ({
-        ...prev,
-        customFields: prev.customFields.filter(f => f.id !== fieldId)
-      }))
+    const field = customFields.find(f => f.id === fieldId)
+    if (field && confirm(`Delete custom field "${field.name}" from ALL vehicles? This action cannot be undone.`)) {
+      // Remove from global fields
+      setCustomFields(prev => prev.filter(f => f.id !== fieldId))
+      
+      // Remove values from all vehicles (in real app, this would be an API call)
+      setEditedData(prev => {
+        const newValues = { ...prev.customFieldValues }
+        delete newValues[fieldId]
+        return {
+          ...prev,
+          customFieldValues: newValues
+        }
+      })
     }
   }
   
-  // Update custom field value
-  const handleCustomFieldChange = (fieldId: string, value: string) => {
+  // Update custom field value for this vehicle
+  const handleCustomFieldValueChange = (fieldId: string, value: string) => {
     setEditedData(prev => ({
       ...prev,
-      customFields: prev.customFields.map(f => 
-        f.id === fieldId ? { ...f, value } : f
-      )
+      customFieldValues: {
+        ...prev.customFieldValues,
+        [fieldId]: value
+      }
     }))
   }
   
@@ -752,36 +780,35 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   <Settings2 className="h-5 w-5 mr-2 text-gray-600" />
                   Custom Fields
                 </h2>
-                <button 
-                  onClick={() => setShowAddCustomFieldModal(true)}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Field
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={() => setShowManageFieldsModal(true)}
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    <Settings2 className="h-4 w-4 mr-1" />
+                    Manage
+                  </button>
+                  <button 
+                    onClick={() => setShowAddCustomFieldModal(true)}
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Field
+                  </button>
+                </div>
               </div>
-              {vehicle.customFields && vehicle.customFields.length > 0 ? (
+              {customFields.length > 0 ? (
                 <dl className="grid grid-cols-2 gap-6">
-                  {vehicle.customFields.map((field) => (
+                  {customFields.map((field) => (
                     <div key={field.id} className="space-y-1">
-                      <dt className="text-sm font-medium text-gray-600 flex items-center justify-between">
-                        <span className="flex items-center">
-                          {field.type === 'text' && <Type className="h-4 w-4 mr-1.5 text-gray-400" />}
-                          {field.type === 'number' && <Hash className="h-4 w-4 mr-1.5 text-gray-400" />}
-                          {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-1.5 text-gray-400" />}
-                          {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-1.5 text-gray-400" />}
-                          {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-1.5 text-gray-400" />}
-                          {field.name}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </span>
-                        {isEditMode && (
-                          <button 
-                            onClick={() => handleDeleteCustomField(field.id)}
-                            className="text-red-600 hover:bg-red-50 p-1 rounded transition-all"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
+                      <dt className="text-sm font-medium text-gray-600 flex items-center">
+                        {field.type === 'text' && <Type className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.type === 'number' && <Hash className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.name}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
                       </dt>
                       <dd>
                         {isEditMode ? (
@@ -789,8 +816,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             {field.type === 'text' && (
                               <input
                                 type="text"
-                                value={field.value || ''}
-                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                value={vehicle.customFieldValues?.[field.id] || ''}
+                                onChange={(e) => handleCustomFieldValueChange(field.id, e.target.value)}
                                 className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 required={field.required}
                               />
@@ -798,8 +825,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             {field.type === 'number' && (
                               <input
                                 type="number"
-                                value={field.value || ''}
-                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                value={vehicle.customFieldValues?.[field.id] || ''}
+                                onChange={(e) => handleCustomFieldValueChange(field.id, e.target.value)}
                                 className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 required={field.required}
                               />
@@ -807,16 +834,16 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             {field.type === 'date' && (
                               <input
                                 type="date"
-                                value={field.value || ''}
-                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                value={vehicle.customFieldValues?.[field.id] || ''}
+                                onChange={(e) => handleCustomFieldValueChange(field.id, e.target.value)}
                                 className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 required={field.required}
                               />
                             )}
                             {field.type === 'boolean' && (
                               <select
-                                value={field.value || 'false'}
-                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                value={vehicle.customFieldValues?.[field.id] || 'false'}
+                                onChange={(e) => handleCustomFieldValueChange(field.id, e.target.value)}
                                 className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 required={field.required}
                               >
@@ -826,8 +853,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             )}
                             {field.type === 'select' && (
                               <select
-                                value={field.value || ''}
-                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                value={vehicle.customFieldValues?.[field.id] || ''}
+                                onChange={(e) => handleCustomFieldValueChange(field.id, e.target.value)}
                                 className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 required={field.required}
                               >
@@ -840,7 +867,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                           </>
                         ) : (
                           <span className="text-base font-medium text-gray-900">
-                            {field.type === 'boolean' ? (field.value === 'true' ? 'Yes' : 'No') : (field.value || '-')}
+                            {field.type === 'boolean' 
+                              ? (vehicle.customFieldValues?.[field.id] === 'true' ? 'Yes' : 'No') 
+                              : (vehicle.customFieldValues?.[field.id] || '-')}
                           </span>
                         )}
                       </dd>
@@ -848,7 +877,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </dl>
               ) : (
-                <p className="text-gray-500 text-sm">No custom fields added yet.</p>
+                <p className="text-gray-500 text-sm">No custom fields defined. Add fields that will be available for all vehicles.</p>
               )}
             </div>
             
@@ -1384,6 +1413,84 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
       
+      {/* Manage Custom Fields Modal */}
+      {showManageFieldsModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={() => setShowManageFieldsModal(false)}
+                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div>
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                  <Settings2 className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Manage Custom Fields
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    These fields are available for all vehicles in your inventory
+                  </p>
+                </div>
+                <div className="mt-5">
+                  {customFields.length > 0 ? (
+                    <ul className="divide-y divide-gray-200">
+                      {customFields.map((field) => (
+                        <li key={field.id} className="py-3 flex items-center justify-between">
+                          <div className="flex items-center">
+                            {field.type === 'text' && <Type className="h-4 w-4 mr-2 text-gray-400" />}
+                            {field.type === 'number' && <Hash className="h-4 w-4 mr-2 text-gray-400" />}
+                            {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-2 text-gray-400" />}
+                            {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-2 text-gray-400" />}
+                            {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-2 text-gray-400" />}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {field.name}
+                                {field.required && <span className="text-red-500 ml-1">*</span>}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Type: {field.type}
+                                {field.options && ` • Options: ${field.options.join(', ')}`}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteCustomField(field.id)}
+                            className="ml-4 text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-center text-gray-500 text-sm">No custom fields defined yet.</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-6">
+                <button
+                  onClick={() => setShowManageFieldsModal(false)}
+                  className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Add Custom Field Modal */}
       {showAddCustomFieldModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -1409,6 +1516,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   <h3 className="text-lg leading-6 font-medium text-gray-900">
                     Add Custom Field
                   </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    This field will be added to all vehicles in your inventory
+                  </p>
                   <div className="mt-4 space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Field Name</label>
