@@ -13,11 +13,12 @@ import {
   Download,
   Upload,
   Clock,
-  User
+  User,
+  Save,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { use } from 'react'
+import { use, useState } from 'react'
 
 // Mock data - will be replaced with real database query
 const vehicleData = {
@@ -77,14 +78,35 @@ const vehicleData = {
 export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // In real app, fetch vehicle data using params.id
   const { id } = use(params)
-  const vehicle = vehicleData
-  const router = useRouter()
   
-  // Debug logging for all button clicks
+  // State for edit mode
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedData, setEditedData] = useState(vehicleData)
+  
+  // Toggle edit mode
   const handleEdit = () => {
-    console.log('[DEBUG] Edit button clicked for vehicle:', id)
-    // TODO: Navigate to edit page
-    router.push(`/vehicles/${id}/edit`)
+    console.log('[DEBUG] Edit mode toggled:', !isEditMode)
+    setIsEditMode(!isEditMode)
+    if (isEditMode) {
+      // Reset changes if canceling
+      setEditedData(vehicleData)
+    }
+  }
+  
+  // Save changes
+  const handleSave = () => {
+    console.log('[DEBUG] Saving changes:', editedData)
+    // TODO: Call API to save changes
+    setIsEditMode(false)
+    // In real app, would update vehicleData with response
+  }
+  
+  // Handle field changes
+  const handleFieldChange = (field: string, value: string | number) => {
+    setEditedData(prev => ({
+      ...prev,
+      [field]: value
+    }))
   }
   
   const handleDelete = () => {
@@ -121,6 +143,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     // TODO: Trigger document download
   }
   
+  // Use editedData when in edit mode, otherwise use original data
+  const vehicle = isEditMode ? editedData : vehicleData
+  
   return (
     <div>
       <Navigation />
@@ -144,26 +169,54 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <button 
-                onClick={handleEdit}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                Edit
-              </button>
-              <button 
-                onClick={handleDelete}
-                className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </button>
+              {isEditMode ? (
+                <>
+                  <button 
+                    onClick={handleSave}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
+                  </button>
+                  <button 
+                    onClick={handleEdit}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleEdit}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </button>
+                  <button 
+                    onClick={handleDelete}
+                    className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isEditMode && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Edit Mode:</strong> Make your changes and click Save to update, or Cancel to discard changes.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content - Left Side */}
           <div className="lg:col-span-2 space-y-6">
@@ -198,43 +251,153 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
               <dl className="grid grid-cols-2 gap-4">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Make</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.make}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.make}
+                        onChange={(e) => handleFieldChange('make', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.make}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Model</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.model}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.model}
+                        onChange={(e) => handleFieldChange('model', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.model}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Year</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.year}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="number"
+                        value={vehicle.year}
+                        onChange={(e) => handleFieldChange('year', parseInt(e.target.value))}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.year}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Trim</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.trim}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.trim}
+                        onChange={(e) => handleFieldChange('trim', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.trim}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Body Type</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.bodyType}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.bodyType}
+                        onChange={(e) => handleFieldChange('bodyType', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.bodyType}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Color</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.color}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.color}
+                        onChange={(e) => handleFieldChange('color', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.color}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Mileage</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.mileage.toLocaleString()} mi</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="number"
+                        value={vehicle.mileage}
+                        onChange={(e) => handleFieldChange('mileage', parseInt(e.target.value))}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.mileage.toLocaleString()} mi</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Engine</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.engineType}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.engineType}
+                        onChange={(e) => handleFieldChange('engineType', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.engineType}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Transmission</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.transmission}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.transmission}
+                        onChange={(e) => handleFieldChange('transmission', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.transmission}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Drivetrain</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.drivetrain}</dd>
+                  <dd className="mt-1">
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={vehicle.drivetrain}
+                        onChange={(e) => handleFieldChange('drivetrain', e.target.value)}
+                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{vehicle.drivetrain}</span>
+                    )}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -312,13 +475,26 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-medium text-gray-900 mb-4">Status & Pricing</h3>
               <div className="space-y-4">
                 <div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    vehicle.status === 'Available' ? 'bg-green-100 text-green-800' :
-                    vehicle.status === 'Sold' ? 'bg-gray-100 text-gray-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {vehicle.status}
-                  </span>
+                  {isEditMode ? (
+                    <select
+                      value={vehicle.status}
+                      onChange={(e) => handleFieldChange('status', e.target.value)}
+                      className="block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Available">Available</option>
+                      <option value="Sold">Sold</option>
+                      <option value="In Repair">In Repair</option>
+                      <option value="Reserved">Reserved</option>
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      vehicle.status === 'Available' ? 'bg-green-100 text-green-800' :
+                      vehicle.status === 'Sold' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {vehicle.status}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -335,9 +511,21 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                     <span className="text-sm font-medium">${(vehicle.purchasePrice + vehicle.totalExpenses).toLocaleString()}</span>
                   </div>
                   <div className="pt-2 border-t">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Listing Price</span>
-                      <span className="text-lg font-bold text-gray-900">${vehicle.listingPrice.toLocaleString()}</span>
+                      {isEditMode ? (
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-500">$</span>
+                          <input
+                            type="number"
+                            value={vehicle.listingPrice}
+                            onChange={(e) => handleFieldChange('listingPrice', parseInt(e.target.value))}
+                            className="pl-6 w-32 text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-lg font-bold text-gray-900">${vehicle.listingPrice.toLocaleString()}</span>
+                      )}
                     </div>
                     <div className="flex justify-between mt-1">
                       <span className="text-sm text-gray-500">Est. Profit</span>
@@ -357,7 +545,16 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center text-sm">
                   <MapPin className="h-4 w-4 text-gray-400 mr-2" />
                   <span className="text-gray-500">Location:</span>
-                  <span className="ml-2 font-medium">{vehicle.location}</span>
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={vehicle.location}
+                      onChange={(e) => handleFieldChange('location', e.target.value)}
+                      className="ml-2 flex-1 text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <span className="ml-2 font-medium">{vehicle.location}</span>
+                  )}
                 </div>
                 <div className="flex items-center text-sm">
                   <Calendar className="h-4 w-4 text-gray-400 mr-2" />
