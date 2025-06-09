@@ -65,6 +65,7 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'display', label: 'Display', icon: Palette },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'customfields', label: 'Custom Fields', icon: FileText },
   ]
   
   return (
@@ -377,6 +378,60 @@ export default function SettingsPage() {
                   <button className="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100">
                     View Login History
                   </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Custom Fields Settings */}
+            {activeTab === 'customfields' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Custom Fields Management</h3>
+                
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-800">
+                        <strong className="font-semibold">Custom Fields:</strong> Define additional fields that will be available for all vehicles in your inventory.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Manage Custom Fields</h3>
+                  <p className="text-gray-500 mb-6">Create custom fields, formula fields, and manage field definitions for your vehicles.</p>
+                  <a
+                    href="/settings/custom-fields"
+                    className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    <FileText className="h-5 w-5 mr-2" />
+                    Open Custom Fields Manager
+                  </a>
+                </div>
+                
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Available Field Types</h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li>• Text Fields</li>
+                      <li>• Number Fields</li>
+                      <li>• Date Fields</li>
+                      <li>• Yes/No (Boolean) Fields</li>
+                      <li>• Dropdown/Select Fields</li>
+                      <li>• Formula/Calculated Fields</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Formula Field Examples</h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li>• Total Cost: {'{purchasePrice} + {totalExpenses}'}</li>
+                      <li>• Profit Margin: {'{listingPrice} - {purchasePrice} - {totalExpenses}'}</li>
+                      <li>• Cost per Day: {'{totalCost} / {daysInInventory}'}</li>
+                      <li>• Markup %: {'(({listingPrice} - {purchasePrice}) / {purchasePrice}) * 100'}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}

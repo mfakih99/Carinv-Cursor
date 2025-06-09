@@ -29,18 +29,33 @@ import {
   Type,
   ListOrdered,
   ToggleLeft,
-  CalendarPlus
+  CalendarPlus,
+  Calculator
 } from 'lucide-react'
 import Link from 'next/link'
 import { use, useState } from 'react'
+import { evaluateFormula } from '@/utils/formulaEvaluator'
+
+// Define proper type for custom fields
+type CustomField = {
+  id: string
+  name: string
+  type: string
+  required: boolean
+  options?: string[]
+  formula?: string
+}
 
 // Global custom field definitions - in real app, this would come from database/settings
-const globalCustomFields = [
+const globalCustomFields: CustomField[] = [
   { id: '1', name: 'Previous Owner', type: 'text', required: false },
   { id: '2', name: 'Warranty Expires', type: 'date', required: false },
   { id: '3', name: 'Has Service Records', type: 'boolean', required: false },
   { id: '4', name: 'Number of Keys', type: 'number', required: false },
   { id: '5', name: 'Vehicle Source', type: 'select', required: true, options: ['Auction', 'Trade-In', 'Private Sale', 'Dealer'] },
+  // Example calculated fields
+  { id: '6', name: 'Total Cost', type: 'formula', formula: '{purchasePrice} + {totalExpenses}', required: false },
+  { id: '7', name: 'Profit Margin %', type: 'formula', formula: '(({listingPrice} - {purchasePrice} - {totalExpenses}) / {listingPrice}) * 100', required: false },
 ]
 
 // Mock data - will be replaced with real database query
@@ -153,7 +168,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     name: '',
     type: 'text',
     required: false,
-    options: [''] // For select type
+    options: [''], // For select type
+    formula: '' // For formula type
   })
   
   // Toggle edit mode
@@ -354,12 +370,13 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       return
     }
     
-    const field = {
+    const field: CustomField = {
       id: Date.now().toString(),
       name: newCustomField.name,
       type: newCustomField.type,
       required: newCustomField.required,
-      options: newCustomField.type === 'select' ? newCustomField.options.filter(o => o.trim()) : undefined
+      options: newCustomField.type === 'select' ? newCustomField.options.filter(o => o.trim()) : undefined,
+      formula: newCustomField.type === 'formula' ? newCustomField.formula : undefined
     }
     
     // Add to global custom fields
@@ -380,7 +397,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       name: '',
       type: 'text',
       required: false,
-      options: ['']
+      options: [''],
+      formula: ''
     })
     setShowAddCustomFieldModal(false)
     
@@ -807,6 +825,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-1.5 text-gray-400" />}
                         {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-1.5 text-gray-400" />}
                         {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-1.5 text-gray-400" />}
+                        {field.type === 'formula' && <Calculator className="h-4 w-4 mr-1.5 text-gray-400" />}
                         {field.name}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                       </dt>
@@ -864,11 +883,21 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                                 ))}
                               </select>
                             )}
+                            {field.type === 'formula' && (
+                              <div className="px-3 py-2 bg-gray-100 rounded-lg">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {field.formula && evaluateFormula(field.formula, vehicle, vehicle.customFieldValues)}
+                                </span>
+                                <span className="text-xs text-gray-500 block mt-1">Calculated field</span>
+                              </div>
+                            )}
                           </>
                         ) : (
                           <span className="text-base font-medium text-gray-900">
                             {field.type === 'boolean' 
                               ? (vehicle.customFieldValues?.[field.id] === 'true' ? 'Yes' : 'No') 
+                              : field.type === 'formula' && field.formula
+                              ? evaluateFormula(field.formula, vehicle, vehicle.customFieldValues)
                               : (vehicle.customFieldValues?.[field.id] || '-')}
                           </span>
                         )}
@@ -1453,6 +1482,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-2 text-gray-400" />}
                             {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-2 text-gray-400" />}
                             {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-2 text-gray-400" />}
+                            {field.type === 'formula' && <Calculator className="h-4 w-4 mr-2 text-gray-400" />}
                             <div>
                               <p className="text-sm font-medium text-gray-900">
                                 {field.name}
@@ -1542,6 +1572,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         <option value="date">Date</option>
                         <option value="boolean">Yes/No</option>
                         <option value="select">Dropdown</option>
+                        <option value="formula">Formula (Calculated)</option>
                       </select>
                     </div>
                     {newCustomField.type === 'select' && (
@@ -1554,6 +1585,21 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                           className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Option 1&#10;Option 2&#10;Option 3"
                         />
+                      </div>
+                    )}
+                    {newCustomField.type === 'formula' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Formula</label>
+                        <textarea
+                          value={newCustomField.formula || ''}
+                          onChange={(e) => setNewCustomField({...newCustomField, formula: e.target.value})}
+                          rows={3}
+                          className="mt-1 block w-full px-3 py-2 text-gray-900 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="e.g., {purchasePrice} + {totalExpenses}"
+                        />
+                        <p className="mt-2 text-xs text-gray-500">
+                          Available fields: {'{purchasePrice}'}, {'{listingPrice}'}, {'{totalExpenses}'}, {'{daysInInventory}'}, {'{mileage}'}, {'{year}'}
+                        </p>
                       </div>
                     )}
                     <div className="flex items-center">
@@ -1591,4 +1637,4 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       )}
     </div>
   )
-} 
+}
