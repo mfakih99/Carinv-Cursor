@@ -1,3 +1,5 @@
+'use client'
+
 import Navigation from '@/components/layout/Navigation'
 import { 
   Car, 
@@ -17,6 +19,8 @@ import {
   User
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { use } from 'react'
 
 // Mock data - will be replaced with real database query
 const vehicleData = {
@@ -73,10 +77,52 @@ const vehicleData = {
   ]
 }
 
-export default async function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // In real app, fetch vehicle data using params.id
-  const { id } = await params
+  const { id } = use(params)
   const vehicle = vehicleData
+  const router = useRouter()
+  
+  // Debug logging for all button clicks
+  const handleEdit = () => {
+    console.log('[DEBUG] Edit button clicked for vehicle:', id)
+    // TODO: Navigate to edit page
+    router.push(`/vehicles/${id}/edit`)
+  }
+  
+  const handleDelete = () => {
+    console.log('[DEBUG] Delete button clicked for vehicle:', id)
+    // TODO: Show confirmation dialog and delete
+    if (confirm('Are you sure you want to delete this vehicle?')) {
+      console.log('[DEBUG] User confirmed deletion')
+      // TODO: Call delete API
+    }
+  }
+  
+  const handleAddExpense = () => {
+    console.log('[DEBUG] Add Expense button clicked')
+    // TODO: Show expense modal or navigate
+  }
+  
+  const handleAddNote = () => {
+    console.log('[DEBUG] Add Note button clicked')
+    // TODO: Show note modal or form
+  }
+  
+  const handleAddPhoto = () => {
+    console.log('[DEBUG] Add Photo button clicked')
+    // TODO: Show photo upload modal
+  }
+  
+  const handleUploadDocument = () => {
+    console.log('[DEBUG] Upload Document button clicked')
+    // TODO: Show document upload modal
+  }
+  
+  const handleDownloadDocument = (docId: string, docName: string) => {
+    console.log('[DEBUG] Download button clicked for document:', docId, docName)
+    // TODO: Trigger document download
+  }
   
   return (
     <div>
@@ -101,11 +147,17 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <button 
+                onClick={handleEdit}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </button>
-              <button className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50">
+              <button 
+                onClick={handleDelete}
+                className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+              >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
               </button>
@@ -134,7 +186,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                 ))}
-                <button className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400">
+                <button 
+                  onClick={handleAddPhoto}
+                  className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400"
+                >
                   <Plus className="h-8 w-8 text-gray-400" />
                 </button>
               </div>
@@ -191,7 +246,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium text-gray-900">Expenses</h2>
-                <button className="text-sm text-blue-600 hover:text-blue-500">
+                <button 
+                  onClick={handleAddExpense}
+                  className="text-sm text-blue-600 hover:text-blue-500"
+                >
                   <Plus className="h-4 w-4 inline mr-1" />
                   Add Expense
                 </button>
@@ -223,7 +281,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium text-gray-900">Activity & Notes</h2>
-                <button className="text-sm text-blue-600 hover:text-blue-500">
+                <button 
+                  onClick={handleAddNote}
+                  className="text-sm text-blue-600 hover:text-blue-500"
+                >
                   <Plus className="h-4 w-4 inline mr-1" />
                   Add Note
                 </button>
@@ -318,7 +379,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Documents</h3>
-                <button className="text-sm text-blue-600 hover:text-blue-500">
+                <button 
+                  onClick={handleUploadDocument}
+                  className="text-sm text-blue-600 hover:text-blue-500"
+                >
                   <Upload className="h-4 w-4" />
                 </button>
               </div>
@@ -332,7 +396,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
                         <p className="text-xs text-gray-500">{doc.size} • {doc.uploadedAt}</p>
                       </div>
                     </div>
-                    <button className="text-gray-400 hover:text-gray-500">
+                    <button 
+                      onClick={() => handleDownloadDocument(doc.id, doc.name)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
                       <Download className="h-4 w-4" />
                     </button>
                   </div>
