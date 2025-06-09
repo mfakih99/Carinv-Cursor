@@ -1442,83 +1442,95 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
       
-      {/* Manage Custom Fields Modal */}
+            {/* Manage Custom Fields Modal */}
       {showManageFieldsModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div className="absolute top-0 right-0 pt-4 pr-4">
-                <button
-                  onClick={() => setShowManageFieldsModal(false)}
-                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div>
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                  <Settings2 className="h-6 w-6 text-blue-600" />
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 z-40 transition-opacity"
+            onClick={() => setShowManageFieldsModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 overflow-y-auto pointer-events-none">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6 pointer-events-auto">
+                <div className="absolute top-0 right-0 pt-4 pr-4">
+                  <button
+                    onClick={() => setShowManageFieldsModal(false)}
+                    className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
-                <div className="mt-3 text-center">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    Manage Custom Fields
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    These fields are available for all vehicles in your inventory
-                  </p>
-                </div>
-                <div className="mt-5">
-                  {customFields.length > 0 ? (
-                    <ul className="divide-y divide-gray-200">
-                      {customFields.map((field) => (
-                        <li key={field.id} className="py-3 flex items-center justify-between">
-                          <div className="flex items-center">
-                            {field.type === 'text' && <Type className="h-4 w-4 mr-2 text-gray-400" />}
-                            {field.type === 'number' && <Hash className="h-4 w-4 mr-2 text-gray-400" />}
-                            {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-2 text-gray-400" />}
-                            {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-2 text-gray-400" />}
-                            {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-2 text-gray-400" />}
-                            {field.type === 'formula' && <Calculator className="h-4 w-4 mr-2 text-gray-400" />}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {field.name}
-                                {field.required && <span className="text-red-500 ml-1">*</span>}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Type: {field.type}
-                                {field.options && ` • Options: ${field.options.join(', ')}`}
-                              </p>
+                <div>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                    <Settings2 className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="mt-3 text-center">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Manage Custom Fields
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      These fields are available for all vehicles in your inventory
+                    </p>
+                  </div>
+                  <div className="mt-5">
+                    {customFields.length > 0 ? (
+                      <ul className="divide-y divide-gray-200">
+                        {customFields.map((field) => (
+                          <li key={field.id} className="py-3 flex items-center justify-between">
+                            <div className="flex items-center">
+                              {field.type === 'text' && <Type className="h-4 w-4 mr-2 text-gray-400" />}
+                              {field.type === 'number' && <Hash className="h-4 w-4 mr-2 text-gray-400" />}
+                              {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-2 text-gray-400" />}
+                              {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-2 text-gray-400" />}
+                              {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-2 text-gray-400" />}
+                              {field.type === 'formula' && <Calculator className="h-4 w-4 mr-2 text-gray-400" />}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {field.name}
+                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Type: {field.type}
+                                  {field.options && ` • Options: ${field.options.join(', ')}`}
+                                  {field.formula && ` • Formula: ${field.formula}`}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteCustomField(field.id)}
-                            className="ml-4 text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-center text-gray-500 text-sm">No custom fields defined yet.</p>
-                  )}
+                            <button
+                              onClick={() => handleDeleteCustomField(field.id)}
+                              className="ml-4 text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-center text-gray-500 text-sm">No custom fields defined yet.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-5 sm:mt-6">
-                <button
-                  onClick={() => setShowManageFieldsModal(false)}
-                  className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
-                >
-                  Done
-                </button>
+                <div className="mt-5 sm:mt-6 space-y-3">
+                  <button
+                    onClick={() => setShowManageFieldsModal(false)}
+                    className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                  >
+                    Done
+                  </button>
+                  <a
+                    href="/settings/custom-fields"
+                    className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:text-sm"
+                  >
+                    Go to Custom Fields Settings
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
       
       {/* Add Custom Field Modal */}
