@@ -1,0 +1,12 @@
+# Paste this into Railway's Raw Editor for Environment Variables
+# Replace the placeholder values with your actual values
+
+# NextAuth Configuration (Required for authentication when implemented)
+NEXTAUTH_SECRET=your-secret-key-here-replace-with-random-string
+NEXTAUTH_URL=https://your-app-name.up.railway.app
+
+# VIN Decoder API (Free NHTSA API)
+VIN_DECODER_API_URL=https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin
+
+# Note: DATABASE_URL will be automatically added by Railway when you add PostgreSQL service
+# You don't need to add it manually 

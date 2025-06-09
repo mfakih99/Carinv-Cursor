@@ -1,5 +1,6 @@
 import Navigation from '@/components/layout/Navigation'
 import { Car, Search, Filter, MoreVertical } from 'lucide-react'
+import Link from 'next/link'
 
 // Mock data - will be replaced with database queries
 const vehicles = [
@@ -118,21 +119,21 @@ export default function VehiclesPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {vehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="hover:bg-gray-50">
+                <tr key={vehicle.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/vehicles/${vehicle.id}`}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
+                    <Link href={`/vehicles/${vehicle.id}`} className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
                         <Car className="h-10 w-10 text-gray-400" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 hover:text-blue-600">
                           {vehicle.year} {vehicle.make} {vehicle.model}
                         </div>
                         <div className="text-sm text-gray-500">
                           {vehicle.color} • {vehicle.mileage.toLocaleString()} mi
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {vehicle.vin}
@@ -162,7 +163,10 @@ export default function VehiclesPage() {
                     {vehicle.daysInInventory}d
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-gray-400 hover:text-gray-500">
+                    <button 
+                      className="text-gray-400 hover:text-gray-500"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreVertical className="h-5 w-5" />
                     </button>
                   </td>

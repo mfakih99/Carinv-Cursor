@@ -1,5 +1,6 @@
 import Navigation from '@/components/layout/Navigation'
 import { Car, DollarSign, TrendingUp, Clock } from 'lucide-react'
+import Link from 'next/link'
 
 // Mock data for now - will be replaced with real data from database
 const stats = {
@@ -117,13 +118,13 @@ export default function DashboardPage() {
             <ul className="divide-y divide-gray-200">
               {recentVehicles.map((vehicle) => (
                 <li key={vehicle.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
+                  <Link href={`/vehicles/${vehicle.id}`} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
                         <Car className="h-8 w-8 text-gray-400" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 hover:text-blue-600">
                           {vehicle.year} {vehicle.make} {vehicle.model}
                         </div>
                         <div className="text-sm text-gray-500">VIN: {vehicle.vin}</div>
@@ -141,7 +142,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </li>
               ))}
             </ul>
