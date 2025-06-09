@@ -267,141 +267,149 @@ export default function CustomFieldsSettingsPage() {
 
       {/* Add/Edit Field Modal */}
       {showAddFieldModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
-              <div className="absolute top-0 right-0 pt-4 pr-4">
-                <button
-                  onClick={() => {
-                    setShowAddFieldModal(false)
-                    setEditingField(null)
-                  }}
-                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div>
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                  <Settings2 className="h-6 w-6 text-blue-600" />
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 z-40 transition-opacity"
+            onClick={() => {
+              setShowAddFieldModal(false)
+              setEditingField(null)
+            }}
+          />
+          
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 overflow-y-auto pointer-events-none">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 pointer-events-auto">
+                <div className="absolute top-0 right-0 pt-4 pr-4">
+                  <button
+                    onClick={() => {
+                      setShowAddFieldModal(false)
+                      setEditingField(null)
+                    }}
+                    className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
-                <div className="mt-3 text-center">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {editingField ? 'Edit Custom Field' : 'Add Custom Field'}
-                  </h3>
-                </div>
-                <div className="mt-5 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Field Name</label>
-                    <input
-                      type="text"
-                      value={newField.name}
-                      onChange={(e) => setNewField({...newField, name: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="e.g., Total Cost"
-                    />
+                <div>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                    <Settings2 className="h-6 w-6 text-blue-600" />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Field Type</label>
-                    <select
-                      value={newField.type}
-                      onChange={(e) => setNewField({...newField, type: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="date">Date</option>
-                      <option value="boolean">Yes/No</option>
-                      <option value="select">Dropdown</option>
-                      <option value="formula">Formula (Calculated)</option>
-                    </select>
+                  <div className="mt-3 text-center">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      {editingField ? 'Edit Custom Field' : 'Add Custom Field'}
+                    </h3>
                   </div>
-
-                  {newField.type === 'select' && (
+                  <div className="mt-5 space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Options (one per line)</label>
-                      <textarea
-                        value={newField.options.join('\n')}
-                        onChange={(e) => setNewField({...newField, options: e.target.value.split('\n')})}
-                        rows={4}
-                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Option 1&#10;Option 2&#10;Option 3"
-                      />
-                    </div>
-                  )}
-
-                  {newField.type === 'formula' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Formula</label>
-                      <textarea
-                        value={newField.formula}
-                        onChange={(e) => setNewField({...newField, formula: e.target.value})}
-                        rows={3}
-                        className="mt-1 block w-full px-3 py-2 text-gray-900 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., {purchasePrice} + {totalExpenses}"
-                      />
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-600 mb-2">Click to insert field references:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {availableFormulaFields.map((field) => (
-                            <button
-                              key={field.name}
-                              type="button"
-                              onClick={() => insertFieldReference(field.name)}
-                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
-                            >
-                              {field.label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          You can also reference any custom number fields by their name in curly braces.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {newField.type !== 'formula' && (
-                    <div className="flex items-center">
+                      <label className="block text-sm font-medium text-gray-700">Field Name</label>
                       <input
-                        type="checkbox"
-                        id="required"
-                        checked={newField.required}
-                        onChange={(e) => setNewField({...newField, required: e.target.checked})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        type="text"
+                        value={newField.name}
+                        onChange={(e) => setNewField({...newField, name: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Total Cost"
                       />
-                      <label htmlFor="required" className="ml-2 block text-sm text-gray-900">
-                        Required field
-                      </label>
                     </div>
-                  )}
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Field Type</label>
+                      <select
+                        value={newField.type}
+                        onChange={(e) => setNewField({...newField, type: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="select">Dropdown</option>
+                        <option value="formula">Formula (Calculated)</option>
+                      </select>
+                    </div>
+
+                    {newField.type === 'select' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Options (one per line)</label>
+                        <textarea
+                          value={newField.options.join('\n')}
+                          onChange={(e) => setNewField({...newField, options: e.target.value.split('\n')})}
+                          rows={4}
+                          className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Option 1&#10;Option 2&#10;Option 3"
+                        />
+                      </div>
+                    )}
+
+                    {newField.type === 'formula' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Formula</label>
+                        <textarea
+                          value={newField.formula}
+                          onChange={(e) => setNewField({...newField, formula: e.target.value})}
+                          rows={3}
+                          className="mt-1 block w-full px-3 py-2 text-gray-900 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="e.g., {purchasePrice} + {totalExpenses}"
+                        />
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600 mb-2">Click to insert field references:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {availableFormulaFields.map((field) => (
+                              <button
+                                key={field.name}
+                                type="button"
+                                onClick={() => insertFieldReference(field.name)}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                              >
+                                {field.label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            You can also reference any custom number fields by their name in curly braces.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {newField.type !== 'formula' && (
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="required"
+                          checked={newField.required}
+                          onChange={(e) => setNewField({...newField, required: e.target.checked})}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="required" className="ml-2 block text-sm text-gray-900">
+                          Required field
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
-                <button
-                  onClick={handleSaveField}
-                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  {editingField ? 'Update Field' : 'Add Field'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddFieldModal(false)
-                    setEditingField(null)
-                  }}
-                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                  Cancel
-                </button>
+                <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    onClick={handleSaveField}
+                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    {editingField ? 'Update Field' : 'Add Field'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddFieldModal(false)
+                      setEditingField(null)
+                    }}
+                    className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
