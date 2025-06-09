@@ -4,11 +4,8 @@ import Navigation from '@/components/layout/Navigation'
 import { 
   Car, 
   Calendar, 
-  DollarSign, 
   FileText, 
   MapPin, 
-  Gauge, 
-  Settings,
   ArrowLeft,
   Edit,
   Trash2,

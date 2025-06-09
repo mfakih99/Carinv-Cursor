@@ -15,9 +15,18 @@ const expenseCategories = [
   { value: 'OTHER', label: 'Other' }
 ]
 
+interface ExpenseData {
+  vehicleId: string
+  category: string
+  amount: number
+  date: string
+  description: string
+  receiptUrl: string
+}
+
 interface ExpenseFormProps {
   vehicleId: string
-  onSubmit?: (data: any) => void
+  onSubmit?: (data: ExpenseData) => void
   onCancel?: () => void
 }
 
