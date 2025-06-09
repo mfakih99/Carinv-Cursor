@@ -30,7 +30,10 @@ import {
   ListOrdered,
   ToggleLeft,
   CalendarPlus,
-  Calculator
+  Calculator,
+  Receipt,
+  Paperclip,
+  Eye
 } from 'lucide-react'
 import Link from 'next/link'
 import { use, useState } from 'react'
@@ -44,6 +47,25 @@ type CustomField = {
   required: boolean
   options?: string[]
   formula?: string
+}
+
+// Define type for receipt
+type Receipt = {
+  id: string
+  name: string
+  url: string
+  size: string
+  uploadedAt: string
+}
+
+// Define type for expense
+type Expense = {
+  id: string
+  category: string
+  amount: number
+  description: string
+  date: string
+  receipts: Receipt[]
 }
 
 // Global custom field definitions - in real app, this would come from database/settings
@@ -88,11 +110,11 @@ const vehicleData = {
   
   // Related data
   expenses: [
-    { id: '1', category: 'REPAIR', amount: 1500, description: 'Engine service', date: '2024-01-17' },
-    { id: '2', category: 'DETAILING', amount: 300, description: 'Full detail', date: '2024-01-18' },
-    { id: '3', category: 'TRANSPORTATION', amount: 200, description: 'Transport from auction', date: '2024-01-16' },
-    { id: '4', category: 'INSPECTION', amount: 500, description: 'Pre-purchase inspection', date: '2024-01-15' },
-  ],
+    { id: '1', category: 'REPAIR', amount: 1500, description: 'Engine service', date: '2024-01-17', receipts: [] as Receipt[] },
+    { id: '2', category: 'DETAILING', amount: 300, description: 'Full detail', date: '2024-01-18', receipts: [] as Receipt[] },
+    { id: '3', category: 'TRANSPORTATION', amount: 200, description: 'Transport from auction', date: '2024-01-16', receipts: [] as Receipt[] },
+    { id: '4', category: 'INSPECTION', amount: 500, description: 'Pre-purchase inspection', date: '2024-01-15', receipts: [] as Receipt[] },
+  ] as Expense[],
   
   notes: [
     { id: '1', content: 'Vehicle in excellent condition, minor scratches on rear bumper', createdAt: '2024-01-15', user: 'John Doe' },
@@ -152,13 +174,16 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const [showAddPhotoModal, setShowAddPhotoModal] = useState(false)
   const [showAddCustomFieldModal, setShowAddCustomFieldModal] = useState(false)
   const [showManageFieldsModal, setShowManageFieldsModal] = useState(false)
+  const [showReceiptsModal, setShowReceiptsModal] = useState(false)
+  const [currentExpenseId, setCurrentExpenseId] = useState<string | null>(null)
   
   // State for new expense/note forms
   const [newExpense, setNewExpense] = useState({
     category: '',
     amount: '',
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    receipts: [] as Receipt[]
   })
   
   const [newNote, setNewNote] = useState('')
@@ -256,7 +281,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       category: newExpense.category,
       amount: Number(newExpense.amount),
       description: newExpense.description,
-      date: newExpense.date
+      date: newExpense.date,
+      receipts: newExpense.receipts
     }
     
     setEditedData(prev => {
@@ -274,7 +300,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       category: '',
       amount: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      receipts: []
     })
     setShowAddExpenseModal(false)
     
@@ -449,6 +476,64 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const handleDownloadDocument = (docId: string, docName: string) => {
     console.log('[DEBUG] Download button clicked for document:', docId, docName)
     // TODO: Trigger document download
+  }
+  
+  // Handle receipt upload
+  const handleUploadReceipt = (expenseId: string) => {
+    setCurrentExpenseId(expenseId)
+    // In real app, this would open a file upload dialog
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,application/pdf'
+    input.multiple = true
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files && files.length > 0) {
+        // Process files and add to expense
+        const receipts = Array.from(files).map((file, index) => ({
+          id: Date.now().toString() + index,
+          name: file.name,
+          url: URL.createObjectURL(file),
+          size: `${(file.size / 1024).toFixed(1)} KB`,
+          uploadedAt: new Date().toISOString().split('T')[0]
+        }))
+        
+        setEditedData(prev => ({
+          ...prev,
+          expenses: prev.expenses.map(exp => 
+            exp.id === expenseId 
+              ? { ...exp, receipts: [...(exp.receipts || []), ...receipts] }
+              : exp
+          )
+        }))
+        
+        // Auto-enable edit mode if not already in it
+        if (!isEditMode) {
+          setIsEditMode(true)
+        }
+      }
+    }
+    input.click()
+  }
+  
+  // Handle view receipts
+  const handleViewReceipts = (expenseId: string) => {
+    setCurrentExpenseId(expenseId)
+    setShowReceiptsModal(true)
+  }
+  
+  // Handle delete receipt
+  const handleDeleteReceipt = (expenseId: string, receiptId: string) => {
+    if (confirm('Delete this receipt?')) {
+      setEditedData(prev => ({
+        ...prev,
+        expenses: prev.expenses.map(exp => 
+          exp.id === expenseId 
+            ? { ...exp, receipts: exp.receipts?.filter(r => r.id !== receiptId) || [] }
+            : exp
+        )
+      }))
+    }
   }
   
   // Use editedData when in edit mode, otherwise use original data
@@ -967,6 +1052,28 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                               <p className="text-xs text-gray-500 mt-0.5">{expense.date}</p>
                             </>
                           )}
+                          {/* Receipts section */}
+                          <div className="mt-2 flex items-center space-x-2">
+                            <button
+                              onClick={() => handleUploadReceipt(expense.id)}
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                            >
+                              <Receipt className="h-3 w-3 mr-1" />
+                              {expense.receipts && expense.receipts.length > 0 
+                                ? `${expense.receipts.length} Receipt${expense.receipts.length > 1 ? 's' : ''}`
+                                : 'Add Receipt'
+                              }
+                            </button>
+                            {expense.receipts && expense.receipts.length > 0 && (
+                              <button
+                                onClick={() => handleViewReceipts(expense.id)}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -1302,6 +1409,66 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
                         className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
+                    </div>
+                    
+                    {/* Receipt Upload Section */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Receipts</label>
+                      {newExpense.receipts.length > 0 ? (
+                        <div className="space-y-2 mb-2">
+                          {newExpense.receipts.map((receipt, index) => (
+                            <div key={receipt.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                              <div className="flex items-center space-x-2">
+                                <Paperclip className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-700 truncate max-w-xs">{receipt.name}</span>
+                                <span className="text-xs text-gray-500">({receipt.size})</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewExpense({
+                                    ...newExpense,
+                                    receipts: newExpense.receipts.filter((_, i) => i !== index)
+                                  })
+                                }}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input')
+                          input.type = 'file'
+                          input.accept = 'image/*,application/pdf'
+                          input.multiple = true
+                          input.onchange = (e) => {
+                            const files = (e.target as HTMLInputElement).files
+                            if (files && files.length > 0) {
+                              const newReceipts = Array.from(files).map((file, index) => ({
+                                id: Date.now().toString() + index,
+                                name: file.name,
+                                url: URL.createObjectURL(file),
+                                size: `${(file.size / 1024).toFixed(1)} KB`,
+                                uploadedAt: new Date().toISOString().split('T')[0]
+                              }))
+                              setNewExpense({
+                                ...newExpense,
+                                receipts: [...newExpense.receipts, ...newReceipts]
+                              })
+                            }
+                          }
+                          input.click()
+                        }}
+                        className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <Receipt className="h-4 w-4 mr-1" />
+                        {newExpense.receipts.length > 0 ? 'Add More Receipts' : 'Add Receipt'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1646,6 +1813,130 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
+      )}
+      
+      {/* View Receipts Modal */}
+      {showReceiptsModal && currentExpenseId && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 z-40 transition-opacity"
+            onClick={() => setShowReceiptsModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 overflow-y-auto pointer-events-none">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full p-6 pointer-events-auto max-h-[80vh] overflow-hidden flex flex-col">
+                <div className="absolute top-0 right-0 pt-4 pr-4">
+                  <button
+                    onClick={() => setShowReceiptsModal(false)}
+                    className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                    <Receipt className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="mt-3 text-center">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Expense Receipts
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {(() => {
+                        const expense = vehicle.expenses.find(e => e.id === currentExpenseId)
+                        return expense ? `${expense.description} - $${expense.amount.toLocaleString()}` : ''
+                      })()}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-5 overflow-y-auto flex-1">
+                  {(() => {
+                    const expense = vehicle.expenses.find(e => e.id === currentExpenseId)
+                    const receipts = expense?.receipts || []
+                    
+                    if (receipts.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <Receipt className="mx-auto h-12 w-12 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-500">No receipts uploaded yet</p>
+                          <button
+                            onClick={() => {
+                              setShowReceiptsModal(false)
+                              handleUploadReceipt(currentExpenseId)
+                            }}
+                            className="mt-4 inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Upload Receipt
+                          </button>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <div className="grid grid-cols-2 gap-4">
+                        {receipts.map((receipt) => (
+                          <div key={receipt.id} className="relative group">
+                            <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                              {receipt.url.endsWith('.pdf') ? (
+                                <div className="h-full flex items-center justify-center">
+                                  <FileText className="h-16 w-16 text-gray-400" />
+                                </div>
+                              ) : (
+                                <img 
+                                  src={receipt.url} 
+                                  alt={receipt.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-sm font-medium text-gray-900 truncate">{receipt.name}</p>
+                              <p className="text-xs text-gray-500">{receipt.size} • {receipt.uploadedAt}</p>
+                            </div>
+                            {isEditMode && (
+                              <button
+                                onClick={() => handleDeleteReceipt(currentExpenseId, receipt.id)}
+                                className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {isEditMode && (
+                          <button
+                            onClick={() => {
+                              setShowReceiptsModal(false)
+                              handleUploadReceipt(currentExpenseId)
+                            }}
+                            className="aspect-[3/4] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-all"
+                          >
+                            <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                            <span className="text-sm text-gray-600">Add More</span>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+                
+                <div className="mt-5 sm:mt-6">
+                  <button
+                    onClick={() => setShowReceiptsModal(false)}
+                    className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
