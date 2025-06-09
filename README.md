@@ -1,42 +1,61 @@
 # Car Wholesaler Inventory Management System
 
-A comprehensive web application for managing used car inventory with VIN decoding, expense tracking, document management, and custom fields functionality.
+A comprehensive full-stack web application for managing car wholesale operations, built with Next.js, TypeScript, Prisma, and PostgreSQL.
 
 ## 🚀 Features
 
-### Core Features
-- **VIN Decoding**: Automatic vehicle information retrieval using NHTSA API
-- **Expense/Cost Tracking**: Track all costs associated with each vehicle
-- **Notes & Updates**: Timestamped activity logging with user attribution
-- **Document Storage**: Store and manage vehicle-related documents
-- **Individual Vehicle Pages**: Detailed view for each vehicle
-- **Custom Fields**: Add dynamic fields similar to Salesforce
+### Core Functionality
+- **Vehicle Management**: Complete CRUD operations with VIN decoder integration
+- **Expense Tracking**: Track all vehicle-related expenses by category
+- **Document Management**: Upload and manage titles, registrations, and other documents
+- **Customer CRM**: Manage buyers and sellers with purchase history
+- **User Authentication**: Secure login/registration with JWT tokens
+- **Real-time Search**: Fast filtering and searching across all data
 
-### Additional Features
-- **Dashboard Analytics**: Real-time business intelligence and KPIs
-- **Advanced Search & Filtering**: Multi-criteria search capabilities
-- **Customer Management**: Track buyers and sales
-- **Mobile Responsive**: Works on all devices
-- **Inventory Lifecycle**: Track vehicles from acquisition to sale
+### Business Features
+- **Profit Tracking**: Automatic profit calculation per vehicle
+- **Expense Categories**: Repairs, maintenance, transportation, fees, etc.
+- **Document Expiry Alerts**: Track expiring registrations and insurance
+- **Customer Communication**: Notes and contact history
+- **Multi-user Support**: Each user has their own isolated data
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Database**: PostgreSQL with Prisma ORM
-- **UI Components**: Radix UI, Lucide Icons
-- **Form Handling**: React Hook Form with Zod validation
-- **State Management**: React Query (TanStack Query)
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL
+- **Authentication**: JWT with bcrypt
+- **File Storage**: Uploadthing / Cloudinary / AWS S3
+- **Deployment**: Railway
 
-## 📋 Prerequisites
+## 📁 Project Structure
 
-- Node.js 18+ and npm
-- PostgreSQL database
-- Git
+```
+car-wholesaler-inv/
+├── src/
+│   ├── app/              # Next.js app router pages
+│   │   ├── api/          # API endpoints
+│   │   ├── vehicles/     # Vehicle management
+│   │   ├── expenses/     # Expense tracking
+│   │   ├── documents/    # Document management
+│   │   ├── customers/    # Customer CRM
+│   │   └── (auth)/       # Authentication pages
+│   ├── components/       # Reusable components
+│   ├── lib/             # Utilities and configurations
+│   └── types/           # TypeScript types
+├── prisma/              # Database schema and migrations
+└── public/              # Static assets
+```
 
-## 🚀 Getting Started
+## 🚀 Quick Start (Deploy to Railway)
+
+See [QUICK_START_RAILWAY.md](./QUICK_START_RAILWAY.md) for deploying in 5 minutes!
+
+## 💻 Local Development
 
 1. **Clone the repository**
 ```bash
+git clone <your-repo-url>
 cd car-wholesaler-inv
 ```
 
@@ -46,29 +65,16 @@ npm install
 ```
 
 3. **Set up environment variables**
-Create a `.env` file in the root directory:
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/car_wholesaler_db?schema=public"
-
-# NextAuth (for future authentication)
-NEXTAUTH_SECRET="your-secret-key-here"
-NEXTAUTH_URL="http://localhost:3000"
-
-# VIN Decoder API (NHTSA - Free)
-VIN_DECODER_API_URL="https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin"
+```bash
+cp env.example .env
+# Edit .env with your database URL and other configs
 ```
 
 4. **Set up the database**
 ```bash
-# Generate Prisma client
 npx prisma generate
-
-# Create database schema
 npx prisma db push
-
-# (Optional) Seed with sample data
-npx prisma db seed
+npx prisma db seed # Optional: adds demo data
 ```
 
 5. **Run the development server**
@@ -76,118 +82,130 @@ npx prisma db seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-## 📱 Application Structure
+## 📝 Environment Variables
 
+Required environment variables:
+
+```env
+# Database
+DATABASE_URL="postgresql://..."
+
+# Authentication
+NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+
+# File Storage (choose one)
+UPLOADTHING_SECRET="..."
+UPLOADTHING_APP_ID="..."
+# OR
+CLOUDINARY_CLOUD_NAME="..."
+CLOUDINARY_API_KEY="..."
+CLOUDINARY_API_SECRET="..."
 ```
-car-wholesaler-inv/
-├── src/
-│   ├── app/              # Next.js app directory
-│   │   ├── dashboard/    # Dashboard page
-│   │   ├── vehicles/     # Vehicle management pages
-│   │   ├── expenses/     # Expense tracking
-│   │   └── api/          # API routes
-│   ├── components/       # React components
-│   │   ├── ui/           # Base UI components
-│   │   ├── layout/       # Layout components
-│   │   └── vehicles/     # Vehicle-specific components
-│   ├── lib/              # Utility libraries
-│   ├── hooks/            # Custom React hooks
-│   ├── utils/            # Helper functions
-│   └── types/            # TypeScript types
-├── prisma/
-│   └── schema.prisma     # Database schema
-└── public/               # Static assets
-```
-
-## 🔧 Key Features Implementation
-
-### VIN Decoder
-The VIN decoder uses the free NHTSA API to automatically populate vehicle information:
-- Make, Model, Year
-- Trim, Body Type
-- Engine Type, Transmission
-- Drivetrain
-
-### Expense Tracking
-Track various expense categories:
-- Purchase costs
-- Repairs & maintenance
-- Transportation fees
-- Detailing
-- Parts & accessories
-- Inspection fees
-
-### Document Management
-Store and organize documents per vehicle:
-- Title documents
-- Purchase agreements
-- Inspection reports
-- Repair invoices
-- Photos
-
-### Custom Fields
-Create dynamic fields for vehicles:
-- Text, Number, Date fields
-- Dropdown selections
-- Validation rules
-- Conditional visibility
 
 ## 🗄️ Database Schema
 
 The application uses the following main models:
-- **Vehicle**: Core vehicle information
-- **User**: System users with roles
+- **User**: Authentication and user profiles
+- **Vehicle**: Core vehicle inventory
 - **Expense**: Vehicle-related expenses
-- **Document**: Uploaded documents
-- **Note**: Activity notes
-- **Customer**: Customer information
-- **Sale**: Sales records
-- **CustomField**: Dynamic field definitions
-- **CustomFieldValue**: Values for custom fields
+- **Document**: File metadata and links
+- **Customer**: CRM data
+- **Sale**: Transaction records
+- **Note**: Customer communication log
 
-## 🔐 Security Features (To Be Implemented)
+## 🔐 Authentication
 
-- User authentication with NextAuth
-- Role-based access control (Admin, Manager, User)
-- Secure document storage
-- API rate limiting
-- Data encryption
+- JWT-based authentication
+- Secure password hashing with bcrypt
+- Protected API routes with middleware
+- Automatic token refresh
 
-## 📈 Future Enhancements
+## 📱 Key Pages
 
-1. **Marketplace Integration**
-   - Auto-post to Craigslist, Facebook Marketplace
-   - Sync with dealer websites
+- `/` - Marketing landing page
+- `/dashboard` - Main dashboard with statistics
+- `/vehicles` - Vehicle inventory management
+- `/expenses` - Expense tracking and reports
+- `/documents` - Document storage and management
+- `/customers` - Customer relationship management
+- `/settings` - User and app settings
+- `/profile` - User profile management
 
-2. **Advanced Analytics**
-   - Profit margin analysis
-   - Market trends
-   - Inventory turnover reports
+## 🎨 UI Features
 
-3. **Mobile App**
-   - React Native companion app
-   - Barcode/VIN scanning
-   - Offline capability
+- Responsive design for all screen sizes
+- Modern, clean interface with Tailwind CSS
+- Real-time form validation
+- Loading states and error handling
+- Drag-and-drop file uploads
+- Interactive data tables with sorting/filtering
 
-4. **Automation**
-   - Automated pricing suggestions
-   - Email/SMS notifications
-   - Workflow automation
+## 🚀 Deployment
+
+The app is configured for easy deployment on Railway:
+
+1. Push to GitHub
+2. Connect to Railway
+3. Add PostgreSQL database
+4. Set environment variables
+5. Deploy!
+
+See [RAILWAY_BACKEND_SETUP.md](./RAILWAY_BACKEND_SETUP.md) for detailed instructions.
+
+## 📦 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+
+### Vehicles
+- `GET /api/vehicles` - List all vehicles
+- `POST /api/vehicles` - Create vehicle
+- `GET /api/vehicles/[id]` - Get vehicle details
+- `PUT /api/vehicles/[id]` - Update vehicle
+- `DELETE /api/vehicles/[id]` - Delete vehicle
+
+### Expenses
+- `GET /api/expenses` - List expenses (with filters)
+- `POST /api/expenses` - Create expense
+
+### Documents
+- `GET /api/documents` - List documents
+- `POST /api/documents` - Create document metadata
+
+### Customers
+- `GET /api/customers` - List customers
+- `POST /api/customers` - Create customer
+- `GET /api/customers/[id]` - Get customer details
+
+## 🧪 Demo Credentials
+
+```
+Email: demo@carwholesaler.com
+Password: password
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## 📄 License
 
-This project is proprietary software for internal business use.
+This project is licensed under the MIT License.
 
-## 💬 Support
+## 🆘 Support
 
-For support and questions, please contact the development team.
+- Check the [documentation](./docs)
+- Open an [issue](https://github.com/yourusername/car-wholesaler-inv/issues)
+- Join our [Discord](https://discord.gg/your-discord)
+
+---
+
+Built with ❤️ for car wholesalers

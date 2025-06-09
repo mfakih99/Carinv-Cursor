@@ -11,208 +11,133 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  vehicles  Vehicle[]
-  notes     Note[]
-  documents Document[]
-  expenses  Expense[]
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  businessName   String?
+  phone          String?
+  address        String?
+  avatar         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  vehicles       Vehicle[]
+  expenses       Expense[]
+  documents      Document[]
+  customers      Customer[]
+  notes          Note[]
 }
 
 model Vehicle {
-  id                String   @id @default(cuid())
-  vin               String   @unique
-  make              String?
-  model             String?
-  year              Int?
-  trim              String?
-  bodyType          String?
-  color             String?
-  mileage           Int?
-  engineType        String?
-  transmission      String?
-  drivetrain        String?
-  status            VehicleStatus @default(AVAILABLE)
-  purchaseDate      DateTime?
-  purchasePrice     Decimal?
-  purchaseLocation  String?
-  listingPrice      Decimal?
-  soldDate          DateTime?
-  soldPrice         Decimal?
-  profit            Decimal?
-  location          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  userId            String
-  user              User     @relation(fields: [userId], references: [id])
-
-  notes             Note[]
-  documents         Document[]
-  expenses          Expense[]
-  customFieldValues CustomFieldValue[]
-  photos            Photo[]
-  sales             Sale[]
-}
-
-model Note {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  category  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  vehicleId String
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model Document {
-  id           String       @id @default(cuid())
-  name         String
-  type         DocumentType
-  url          String
-  size         Int?
-  mimeType     String?
-  uploadedAt   DateTime     @default(now())
-  vehicleId    String
-  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  uploadedById String
-  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  id             String    @id @default(cuid())
+  vin            String    @unique
+  year           Int
+  make           String
+  model          String
+  trim           String?
+  mileage        Int
+  color          String?
+  engineType     String?
+  transmission   String?
+  drivetrain     String?
+  fuelType       String?
+  bodyStyle      String?
+  purchasePrice  Float
+  purchaseDate   DateTime
+  salePrice      Float?
+  saleDate       DateTime?
+  status         String    @default("available")
+  condition      String?
+  location       String?
+  notes          String?
+  imageUrl       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  
+  expenses       Expense[]
+  documents      Document[]
+  sales          Sale[]
 }
 
 model Expense {
-  id          String       @id @default(cuid())
-  category    ExpenseCategory
-  amount      Decimal
-  description String?
-  date        DateTime
-  receiptUrl  String?
-  createdAt   DateTime     @default(now())
+  id          String   @id @default(cuid())
   vehicleId   String
-  vehicle     Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  category    String   // REPAIR, DETAILING, TRANSPORTATION, INSPECTION, PARTS, FEES, MAINTENANCE, OTHER
+  amount      Float
+  description String
+  date        DateTime
+  status      String   @default("pending") // pending, paid
+  vendor      String?
+  invoiceNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   userId      String
-  user        User         @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 }
 
-model Photo {
-  id        String   @id @default(cuid())
-  url       String
-  caption   String?
-  isPrimary Boolean  @default(false)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  vehicleId String
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+model Document {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  name        String
+  type        String    // TITLE, REGISTRATION, INSURANCE, PURCHASE_AGREEMENT, INSPECTION_REPORT, SERVICE, OTHER
+  url         String    // URL to the file in cloud storage
+  size        String
+  mimeType    String?
+  expiryDate  DateTime?
+  status      String    @default("active") // active, expiring, expired
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
 }
 
 model Customer {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   firstName    String
   lastName     String
-  email        String?  @unique
-  phone        String?
+  email        String    
+  phone        String
   address      String?
-  city         String?
-  state        String?
-  zipCode      String?
-  notes        String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  type         String    // buyer, seller, both
+  businessName String?
+  status       String    @default("active")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  
+  notes        Note[]
   sales        Sale[]
+  
+  @@unique([email, userId])
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  content    String
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model Sale {
-  id           String   @id @default(cuid())
-  saleDate     DateTime
-  salePrice    Decimal
-  paymentMethod String?
-  notes        String?  @db.Text
-  createdAt    DateTime @default(now())
-  vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  customerId   String?
-  customer     Customer? @relation(fields: [customerId], references: [id])
-}
-
-model CustomField {
-  id           String      @id @default(cuid())
-  name         String
-  label        String
-  type         FieldType
-  required     Boolean     @default(false)
-  options      Json?       // For dropdown/select fields
-  validation   Json?       // Validation rules
-  order        Int         @default(0)
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  values       CustomFieldValue[]
-}
-
-model CustomFieldValue {
-  id           String      @id @default(cuid())
-  value        String      @db.Text
-  vehicleId    String
-  vehicle      Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  fieldId      String
-  field        CustomField @relation(fields: [fieldId], references: [id])
-  
-  @@unique([vehicleId, fieldId])
-}
-
-enum UserRole {
-  ADMIN
-  MANAGER
-  USER
-}
-
-enum VehicleStatus {
-  AVAILABLE
-  IN_REPAIR
-  PENDING_SALE
-  SOLD
-  ARCHIVED
-}
-
-enum DocumentType {
-  TITLE
-  PURCHASE_AGREEMENT
-  INSPECTION_REPORT
-  REPAIR_INVOICE
-  INSURANCE
-  REGISTRATION
-  OTHER
-}
-
-enum ExpenseCategory {
-  PURCHASE
-  REPAIR
-  MAINTENANCE
-  TRANSPORTATION
-  DETAILING
-  PARTS
-  FEES
-  INSPECTION
-  OTHER
-}
-
-enum FieldType {
-  TEXT
-  NUMBER
-  DATE
-  SELECT
-  MULTISELECT
-  BOOLEAN
-  TEXTAREA
-  URL
-  EMAIL
-  PHONE
+  id         String   @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  salePrice  Float
+  saleDate   DateTime
+  profit     Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 } 
