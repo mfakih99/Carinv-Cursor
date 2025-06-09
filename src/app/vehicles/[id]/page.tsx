@@ -73,8 +73,9 @@ const vehicleData = {
   ]
 }
 
-export default function VehicleDetailPage({ params }: { params: { id: string } }) {
+export default async function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // In real app, fetch vehicle data using params.id
+  const { id } = await params
   const vehicle = vehicleData
   
   return (

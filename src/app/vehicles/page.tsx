@@ -1,3 +1,5 @@
+'use client'
+
 import Navigation from '@/components/layout/Navigation'
 import { Car, Search, Filter, MoreVertical } from 'lucide-react'
 import Link from 'next/link'

@@ -4,11 +4,12 @@ import prisma from '@/lib/prisma'
 // GET single vehicle by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const vehicle = await prisma.vehicle.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -103,13 +104,14 @@ export async function GET(
 // UPDATE vehicle
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     
     const vehicle = await prisma.vehicle.update({
-      where: { id: params.id },
+      where: { id },
       data: body
     })
     
@@ -126,11 +128,12 @@ export async function PATCH(
 // DELETE vehicle
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     await prisma.vehicle.delete({
-      where: { id: params.id }
+      where: { id }
     })
     
     return NextResponse.json({ success: true })
