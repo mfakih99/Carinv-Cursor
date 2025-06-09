@@ -2,12 +2,23 @@
 
 import { useState } from 'react'
 import Navigation from '@/components/layout/Navigation'
-import { Car, AlertCircle, Check } from 'lucide-react'
+import { AlertCircle, Check } from 'lucide-react'
 
 export default function NewVehiclePage() {
   const [vin, setVin] = useState('')
   const [isDecoding, setIsDecoding] = useState(false)
-  const [decodedData, setDecodedData] = useState<any>(null)
+  interface DecodedVehicleData {
+    make: string
+    model: string
+    year: number
+    trim: string
+    bodyType: string
+    engineType: string
+    transmission: string
+    drivetrain: string
+  }
+  
+  const [decodedData, setDecodedData] = useState<DecodedVehicleData | null>(null)
   const [error, setError] = useState('')
 
   const handleVinDecode = async () => {
