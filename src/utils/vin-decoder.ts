@@ -16,7 +16,13 @@ export async function decodeVIN(vin: string): Promise<VINDecoderResponse | null>
     const results = data.Results || []
     const decodedData: Partial<VINDecoderResponse> = {}
     
-    results.forEach((item: any) => {
+    interface NHTSAResult {
+      Value: string
+      Variable: string
+      ValueId: string
+    }
+    
+    results.forEach((item: NHTSAResult) => {
       switch (item.Variable) {
         case 'Make':
           decodedData.make = item.Value

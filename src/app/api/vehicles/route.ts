@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
 
 // GET all vehicles
 export async function GET(request: NextRequest) {
@@ -46,7 +47,6 @@ export async function POST(request: NextRequest) {
     
     if (!user) {
       // Create demo user if it doesn't exist
-      const bcrypt = require('bcryptjs')
       const hashedPassword = await bcrypt.hash('demo123', 10)
       
       user = await prisma.user.create({

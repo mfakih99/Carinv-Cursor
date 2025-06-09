@@ -1,4 +1,4 @@
-import { Vehicle, Expense, Note, Document, Customer, Sale, CustomField } from '@prisma/client'
+import { Vehicle, Expense, Note, Document, CustomField } from '@prisma/client'
 
 export type VehicleWithRelations = Vehicle & {
   expenses: Expense[]

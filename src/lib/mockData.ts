@@ -1,5 +1,35 @@
 // Shared mock data store for development
-export let mockVehicles: any[] = [
+interface MockVehicle {
+  id: string
+  vin: string
+  make: string
+  model: string
+  year: number
+  trim?: string
+  color?: string
+  mileage?: number
+  status: string
+  purchasePrice?: number
+  listingPrice?: number
+  purchaseDate?: string
+  location?: string
+  userId: string
+  createdAt: string
+  updatedAt: string
+  expenses: unknown[]
+  notes: unknown[]
+  documents: unknown[]
+  photos: unknown[]
+  customFieldValues: unknown[]
+  sales: unknown[]
+  user: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+export const mockVehicles: MockVehicle[] = [
   {
     id: '1',
     vin: '1HGCM82633A004352',
@@ -31,7 +61,7 @@ export let mockVehicles: any[] = [
   }
 ]
 
-export function addMockVehicle(vehicle: any) {
+export function addMockVehicle(vehicle: MockVehicle) {
   mockVehicles.push(vehicle)
 }
 
@@ -39,7 +69,7 @@ export function getMockVehicleById(id: string) {
   return mockVehicles.find(v => v.id === id)
 }
 
-export function updateMockVehicle(id: string, data: any) {
+export function updateMockVehicle(id: string, data: Partial<MockVehicle>) {
   const index = mockVehicles.findIndex(v => v.id === id)
   if (index !== -1) {
     mockVehicles[index] = { ...mockVehicles[index], ...data, updatedAt: new Date().toISOString() }
