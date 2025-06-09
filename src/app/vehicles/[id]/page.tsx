@@ -24,7 +24,12 @@ import {
   Settings2,
   Package,
   CalendarDays,
-  Building2
+  Building2,
+  Camera,
+  Type,
+  ListOrdered,
+  ToggleLeft,
+  CalendarPlus
 } from 'lucide-react'
 import Link from 'next/link'
 import { use, useState } from 'react'
@@ -81,6 +86,15 @@ const vehicleData = {
     { id: '1', url: '/placeholder-car-1.jpg', caption: 'Front view', isPrimary: true },
     { id: '2', url: '/placeholder-car-2.jpg', caption: 'Side view' },
     { id: '3', url: '/placeholder-car-3.jpg', caption: 'Interior' },
+  ],
+  
+  // Custom fields
+  customFields: [
+    { id: '1', name: 'Previous Owner', type: 'text', value: 'Private Seller', required: false },
+    { id: '2', name: 'Warranty Expires', type: 'date', value: '2026-01-15', required: false },
+    { id: '3', name: 'Has Service Records', type: 'boolean', value: 'true', required: false },
+    { id: '4', name: 'Number of Keys', type: 'number', value: '2', required: false },
+    { id: '5', name: 'Vehicle Source', type: 'select', value: 'Auction', options: ['Auction', 'Trade-In', 'Private Sale', 'Dealer'], required: true },
   ]
 }
 
@@ -108,6 +122,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   // State for modals
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
   const [showAddNoteModal, setShowAddNoteModal] = useState(false)
+  const [showAddPhotoModal, setShowAddPhotoModal] = useState(false)
+  const [showAddCustomFieldModal, setShowAddCustomFieldModal] = useState(false)
   
   // State for new expense/note forms
   const [newExpense, setNewExpense] = useState({
@@ -118,6 +134,14 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   })
   
   const [newNote, setNewNote] = useState('')
+  
+  // State for new custom field
+  const [newCustomField, setNewCustomField] = useState({
+    name: '',
+    type: 'text',
+    required: false,
+    options: [''] // For select type
+  })
   
   // Toggle edit mode
   const handleEdit = () => {
@@ -139,10 +163,19 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   
   // Handle field changes
   const handleFieldChange = (field: string, value: string | number) => {
-    setEditedData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setEditedData(prev => {
+      const updatedData = {
+        ...prev,
+        [field]: value
+      }
+      
+      // Recalculate profit if pricing fields changed
+      if (field === 'purchasePrice' || field === 'listingPrice') {
+        updatedData.estimatedProfit = Number(updatedData.listingPrice) - Number(updatedData.purchasePrice) - Number(updatedData.totalExpenses)
+      }
+      
+      return updatedData
+    })
   }
   
   // Handle expense changes
@@ -270,9 +303,96 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
   
+  // Delete photo
+  const handleDeletePhoto = (photoId: string) => {
+    if (confirm('Delete this photo?')) {
+      setEditedData(prev => ({
+        ...prev,
+        photos: prev.photos.filter(p => p.id !== photoId)
+      }))
+      
+      // Auto-enable edit mode if not already in it
+      if (!isEditMode) {
+        setIsEditMode(true)
+      }
+    }
+  }
+  
+  // Set primary photo
+  const handleSetPrimaryPhoto = (photoId: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      photos: prev.photos.map(p => ({
+        ...p,
+        isPrimary: p.id === photoId
+      }))
+    }))
+    
+    // Auto-enable edit mode if not already in it
+    if (!isEditMode) {
+      setIsEditMode(true)
+    }
+  }
+  
+  // Add new custom field
+  const handleAddCustomField = () => {
+    if (!newCustomField.name.trim()) {
+      alert('Please enter a field name')
+      return
+    }
+    
+    const field = {
+      id: Date.now().toString(),
+      name: newCustomField.name,
+      type: newCustomField.type,
+      value: newCustomField.type === 'boolean' ? 'false' : '',
+      required: newCustomField.required,
+      options: newCustomField.type === 'select' ? newCustomField.options.filter(o => o.trim()) : undefined
+    }
+    
+    setEditedData(prev => ({
+      ...prev,
+      customFields: [...(prev.customFields || []), field]
+    }))
+    
+    // Reset form and close modal
+    setNewCustomField({
+      name: '',
+      type: 'text',
+      required: false,
+      options: ['']
+    })
+    setShowAddCustomFieldModal(false)
+    
+    // Auto-enable edit mode if not already in it
+    if (!isEditMode) {
+      setIsEditMode(true)
+    }
+  }
+  
+  // Delete custom field
+  const handleDeleteCustomField = (fieldId: string) => {
+    if (confirm('Delete this custom field?')) {
+      setEditedData(prev => ({
+        ...prev,
+        customFields: prev.customFields.filter(f => f.id !== fieldId)
+      }))
+    }
+  }
+  
+  // Update custom field value
+  const handleCustomFieldChange = (fieldId: string, value: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      customFields: prev.customFields.map(f => 
+        f.id === fieldId ? { ...f, value } : f
+      )
+    }))
+  }
+  
   const handleAddPhoto = () => {
     console.log('[DEBUG] Add Photo button clicked')
-    // TODO: Show photo upload modal
+    setShowAddPhotoModal(true)
   }
   
   const handleUploadDocument = () => {
@@ -392,7 +512,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
             <div className="bg-white shadow-lg rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <Car className="h-5 w-5 mr-2 text-gray-600" />
+                  <Camera className="h-5 w-5 mr-2 text-gray-600" />
                   Photos
                 </h2>
                 <span className="text-sm text-gray-500">{vehicle.photos.length} images</span>
@@ -408,7 +528,28 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Car className="h-16 w-16 text-gray-400" />
                     </div>
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all" />
+                    {isEditMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex items-center space-x-2">
+                          {!photo.isPrimary && (
+                            <button
+                              onClick={() => handleSetPrimaryPhoto(photo.id)}
+                              className="p-2 bg-white rounded-lg text-gray-700 hover:bg-gray-100 transition-all"
+                              title="Set as primary"
+                            >
+                              <Camera className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeletePhoto(photo.id)}
+                            className="p-2 bg-white rounded-lg text-red-600 hover:bg-red-50 transition-all"
+                            title="Delete photo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <button 
@@ -438,7 +579,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.make}
                         onChange={(e) => handleFieldChange('make', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.make}</span>
@@ -456,7 +597,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.model}
                         onChange={(e) => handleFieldChange('model', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.model}</span>
@@ -474,7 +615,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="number"
                         value={vehicle.year}
                         onChange={(e) => handleFieldChange('year', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.year}</span>
@@ -489,7 +630,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.trim}
                         onChange={(e) => handleFieldChange('trim', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.trim}</span>
@@ -507,7 +648,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.bodyType}
                         onChange={(e) => handleFieldChange('bodyType', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.bodyType}</span>
@@ -525,7 +666,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.color}
                         onChange={(e) => handleFieldChange('color', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.color}</span>
@@ -543,7 +684,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="number"
                         value={vehicle.mileage}
                         onChange={(e) => handleFieldChange('mileage', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.mileage.toLocaleString()} mi</span>
@@ -561,7 +702,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.engineType}
                         onChange={(e) => handleFieldChange('engineType', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.engineType}</span>
@@ -579,7 +720,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.transmission}
                         onChange={(e) => handleFieldChange('transmission', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.transmission}</span>
@@ -594,7 +735,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={vehicle.drivetrain}
                         onChange={(e) => handleFieldChange('drivetrain', e.target.value)}
-                        className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       />
                     ) : (
                       <span className="text-base font-medium text-gray-900">{vehicle.drivetrain}</span>
@@ -602,6 +743,113 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   </dd>
                 </div>
               </dl>
+            </div>
+            
+            {/* Custom Fields Section */}
+            <div className="bg-white shadow-lg rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <Settings2 className="h-5 w-5 mr-2 text-gray-600" />
+                  Custom Fields
+                </h2>
+                <button 
+                  onClick={() => setShowAddCustomFieldModal(true)}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Field
+                </button>
+              </div>
+              {vehicle.customFields && vehicle.customFields.length > 0 ? (
+                <dl className="grid grid-cols-2 gap-6">
+                  {vehicle.customFields.map((field) => (
+                    <div key={field.id} className="space-y-1">
+                      <dt className="text-sm font-medium text-gray-600 flex items-center justify-between">
+                        <span className="flex items-center">
+                          {field.type === 'text' && <Type className="h-4 w-4 mr-1.5 text-gray-400" />}
+                          {field.type === 'number' && <Hash className="h-4 w-4 mr-1.5 text-gray-400" />}
+                          {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 mr-1.5 text-gray-400" />}
+                          {field.type === 'date' && <CalendarPlus className="h-4 w-4 mr-1.5 text-gray-400" />}
+                          {field.type === 'select' && <ListOrdered className="h-4 w-4 mr-1.5 text-gray-400" />}
+                          {field.name}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                        </span>
+                        {isEditMode && (
+                          <button 
+                            onClick={() => handleDeleteCustomField(field.id)}
+                            className="text-red-600 hover:bg-red-50 p-1 rounded transition-all"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </dt>
+                      <dd>
+                        {isEditMode ? (
+                          <>
+                            {field.type === 'text' && (
+                              <input
+                                type="text"
+                                value={field.value || ''}
+                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'number' && (
+                              <input
+                                type="number"
+                                value={field.value || ''}
+                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'date' && (
+                              <input
+                                type="date"
+                                value={field.value || ''}
+                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                required={field.required}
+                              />
+                            )}
+                            {field.type === 'boolean' && (
+                              <select
+                                value={field.value || 'false'}
+                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                required={field.required}
+                              >
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                              </select>
+                            )}
+                            {field.type === 'select' && (
+                              <select
+                                value={field.value || ''}
+                                onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                                className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                required={field.required}
+                              >
+                                <option value="">Select...</option>
+                                {field.options?.map((option) => (
+                                  <option key={option} value={option}>{option}</option>
+                                ))}
+                              </select>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-base font-medium text-gray-900">
+                            {field.type === 'boolean' ? (field.value === 'true' ? 'Yes' : 'No') : (field.value || '-')}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-gray-500 text-sm">No custom fields added yet.</p>
+              )}
             </div>
             
             {/* Expenses */}
@@ -628,7 +876,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                           <select
                             value={expense.category}
                             onChange={(e) => handleExpenseChange(expense.id, 'category', e.target.value)}
-                            className="px-2 py-1 text-xs font-medium border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-2 py-1 text-xs font-medium text-gray-900 border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           >
                             {expenseCategories.map(cat => (
                               <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -646,13 +894,13 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                                 type="text"
                                 value={expense.description}
                                 onChange={(e) => handleExpenseChange(expense.id, 'description', e.target.value)}
-                                className="w-full px-2 py-1 text-sm font-medium border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-2 py-1 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                               <input
                                 type="date"
                                 value={expense.date}
                                 onChange={(e) => handleExpenseChange(expense.id, 'date', e.target.value)}
-                                className="px-2 py-1 text-xs border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="px-2 py-1 text-xs text-gray-900 border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
                           ) : (
@@ -671,7 +919,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                               type="number"
                               value={expense.amount}
                               onChange={(e) => handleExpenseChange(expense.id, 'amount', Number(e.target.value))}
-                              className="w-24 px-2 py-1 text-sm font-semibold border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-24 px-2 py-1 text-sm font-semibold text-gray-900 border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
                         ) : (
@@ -761,7 +1009,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                     <select
                       value={vehicle.status}
                       onChange={(e) => handleFieldChange('status', e.target.value)}
-                      className="block w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      className="block w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
                       <option value="Available">Available</option>
                       <option value="Sold">Sold</option>
@@ -782,7 +1030,19 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="space-y-4 bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-600">Purchase Price</span>
-                    <span className="text-base font-semibold text-gray-900">${vehicle.purchasePrice.toLocaleString()}</span>
+                    {isEditMode ? (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                        <input
+                          type="number"
+                          value={vehicle.purchasePrice}
+                          onChange={(e) => handleFieldChange('purchasePrice', parseInt(e.target.value))}
+                          className="pl-8 w-36 px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-base font-semibold text-gray-900">${vehicle.purchasePrice.toLocaleString()}</span>
+                    )}
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-600">Total Expenses</span>
@@ -802,7 +1062,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                             type="number"
                             value={vehicle.listingPrice}
                             onChange={(e) => handleFieldChange('listingPrice', parseInt(e.target.value))}
-                            className="pl-8 w-36 px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className="pl-8 w-36 px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           />
                         </div>
                       ) : (
@@ -837,7 +1097,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                           type="text"
                           value={vehicle.location}
                           onChange={(e) => handleFieldChange('location', e.target.value)}
-                          className="w-full px-3 py-2 text-sm font-medium border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          className="w-full px-3 py-2 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         />
                       ) : (
                         <span className="text-base font-semibold text-gray-900">{vehicle.location}</span>
@@ -945,7 +1205,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                       <select
                         value={newExpense.category}
                         onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select a category</option>
                         {expenseCategories.map(cat => (
@@ -961,7 +1221,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                           type="number"
                           value={newExpense.amount}
                           onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                          className="pl-8 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="pl-8 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="0.00"
                         />
                       </div>
@@ -972,7 +1232,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="text"
                         value={newExpense.description}
                         onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter description"
                       />
                     </div>
@@ -982,7 +1242,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                         type="date"
                         value={newExpense.date}
                         onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -1037,7 +1297,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
                       rows={4}
-                      className="block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter your note here..."
                     />
                   </div>
@@ -1052,6 +1312,164 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 </button>
                 <button
                   onClick={() => setShowAddNoteModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Photo Modal */}
+      {showAddPhotoModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={() => setShowAddPhotoModal(false)}
+                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <Camera className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Add Vehicle Photos
+                  </h3>
+                  <div className="mt-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                      <Camera className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-600">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, GIF up to 10MB
+                      </p>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          // Handle file upload
+                          console.log('Files selected:', e.target.files)
+                          setShowAddPhotoModal(false)
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={() => setShowAddPhotoModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Custom Field Modal */}
+      {showAddCustomFieldModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={() => setShowAddCustomFieldModal(false)}
+                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <Settings2 className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Add Custom Field
+                  </h3>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Field Name</label>
+                      <input
+                        type="text"
+                        value={newCustomField.name}
+                        onChange={(e) => setNewCustomField({...newCustomField, name: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Previous Owner"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Field Type</label>
+                      <select
+                        value={newCustomField.type}
+                        onChange={(e) => setNewCustomField({...newCustomField, type: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="select">Dropdown</option>
+                      </select>
+                    </div>
+                    {newCustomField.type === 'select' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Options (one per line)</label>
+                        <textarea
+                          value={newCustomField.options.join('\n')}
+                          onChange={(e) => setNewCustomField({...newCustomField, options: e.target.value.split('\n')})}
+                          rows={4}
+                          className="mt-1 block w-full px-3 py-2 text-gray-900 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Option 1&#10;Option 2&#10;Option 3"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="required"
+                        checked={newCustomField.required}
+                        onChange={(e) => setNewCustomField({...newCustomField, required: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="required" className="ml-2 block text-sm text-gray-900">
+                        Required field
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={handleAddCustomField}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Add Field
+                </button>
+                <button
+                  onClick={() => setShowAddCustomFieldModal(false)}
                   className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
                 >
                   Cancel
