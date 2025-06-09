@@ -84,6 +84,19 @@ const vehicleData = {
   ]
 }
 
+// Expense categories
+const expenseCategories = [
+  { value: 'PURCHASE', label: 'Purchase' },
+  { value: 'REPAIR', label: 'Repair' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'TRANSPORTATION', label: 'Transportation' },
+  { value: 'DETAILING', label: 'Detailing' },
+  { value: 'PARTS', label: 'Parts' },
+  { value: 'FEES', label: 'Fees' },
+  { value: 'INSPECTION', label: 'Inspection' },
+  { value: 'OTHER', label: 'Other' }
+]
+
 export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // In real app, fetch vehicle data using params.id
   const { id } = use(params)
@@ -91,6 +104,20 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   // State for edit mode
   const [isEditMode, setIsEditMode] = useState(false)
   const [editedData, setEditedData] = useState(vehicleData)
+  
+  // State for modals
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false)
+  
+  // State for new expense/note forms
+  const [newExpense, setNewExpense] = useState({
+    category: '',
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  })
+  
+  const [newNote, setNewNote] = useState('')
   
   // Toggle edit mode
   const handleEdit = () => {
@@ -118,6 +145,122 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     }))
   }
   
+  // Handle expense changes
+  const handleExpenseChange = (expenseId: string, field: string, value: string | number) => {
+    setEditedData(prev => {
+      const updatedExpenses = prev.expenses.map(exp => 
+        exp.id === expenseId ? { ...exp, [field]: value } : exp
+      )
+      
+      // Recalculate total if amount changed
+      const newTotal = field === 'amount' 
+        ? updatedExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0)
+        : prev.totalExpenses
+      
+      return {
+        ...prev,
+        expenses: updatedExpenses,
+        totalExpenses: newTotal,
+        estimatedProfit: prev.listingPrice - prev.purchasePrice - newTotal
+      }
+    })
+  }
+  
+  // Delete expense
+  const handleDeleteExpense = (expenseId: string) => {
+    const expense = editedData.expenses.find(e => e.id === expenseId)
+    if (expense && confirm(`Delete expense: ${expense.description}?`)) {
+      setEditedData(prev => {
+        const newTotal = prev.totalExpenses - expense.amount
+        return {
+          ...prev,
+          expenses: prev.expenses.filter(e => e.id !== expenseId),
+          totalExpenses: newTotal,
+          estimatedProfit: prev.listingPrice - prev.purchasePrice - newTotal
+        }
+      })
+    }
+  }
+  
+  // Add new expense
+  const handleAddExpense = () => {
+    if (!newExpense.category || !newExpense.amount || !newExpense.description) {
+      alert('Please fill in all fields')
+      return
+    }
+    
+    const expense = {
+      id: Date.now().toString(),
+      category: newExpense.category,
+      amount: Number(newExpense.amount),
+      description: newExpense.description,
+      date: newExpense.date
+    }
+    
+    setEditedData(prev => {
+      const newTotal = prev.totalExpenses + expense.amount
+      return {
+        ...prev,
+        expenses: [...prev.expenses, expense],
+        totalExpenses: newTotal,
+        estimatedProfit: prev.listingPrice - prev.purchasePrice - newTotal
+      }
+    })
+    
+    // Reset form and close modal
+    setNewExpense({
+      category: '',
+      amount: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    })
+    setShowAddExpenseModal(false)
+    
+    // Auto-enable edit mode if not already in it
+    if (!isEditMode) {
+      setIsEditMode(true)
+    }
+  }
+  
+  // Add new note
+  const handleAddNote = () => {
+    if (!newNote.trim()) {
+      alert('Please enter a note')
+      return
+    }
+    
+    const note = {
+      id: Date.now().toString(),
+      content: newNote,
+      createdAt: new Date().toISOString().split('T')[0],
+      user: 'Current User' // In real app, get from auth
+    }
+    
+    setEditedData(prev => ({
+      ...prev,
+      notes: [...prev.notes, note]
+    }))
+    
+    // Reset form and close modal
+    setNewNote('')
+    setShowAddNoteModal(false)
+    
+    // Auto-enable edit mode if not already in it
+    if (!isEditMode) {
+      setIsEditMode(true)
+    }
+  }
+  
+  // Delete note
+  const handleDeleteNote = (noteId: string) => {
+    if (confirm('Delete this note?')) {
+      setEditedData(prev => ({
+        ...prev,
+        notes: prev.notes.filter(n => n.id !== noteId)
+      }))
+    }
+  }
+  
   const handleDelete = () => {
     console.log('[DEBUG] Delete button clicked for vehicle:', id)
     // TODO: Show confirmation dialog and delete
@@ -125,16 +268,6 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       console.log('[DEBUG] User confirmed deletion')
       // TODO: Call delete API
     }
-  }
-  
-  const handleAddExpense = () => {
-    console.log('[DEBUG] Add Expense button clicked')
-    // TODO: Show expense modal or navigate
-  }
-  
-  const handleAddNote = () => {
-    console.log('[DEBUG] Add Note button clicked')
-    // TODO: Show note modal or form
   }
   
   const handleAddPhoto = () => {
@@ -164,6 +297,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       'INSPECTION': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'PARTS': 'bg-orange-100 text-orange-800 border-orange-200',
       'FEES': 'bg-gray-100 text-gray-800 border-gray-200',
+      'PURCHASE': 'bg-green-100 text-green-800 border-green-200',
+      'MAINTENANCE': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'OTHER': 'bg-gray-100 text-gray-800 border-gray-200',
     }
     return colors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
@@ -476,7 +612,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   Expenses
                 </h2>
                 <button 
-                  onClick={handleAddExpense}
+                  onClick={() => setShowAddExpenseModal(true)}
                   className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -485,19 +621,74 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <div className="space-y-3">
                 {vehicle.expenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className="flex items-start space-x-3">
-                      <div className={`px-2.5 py-1 rounded-md text-xs font-medium ${getCategoryColor(expense.category)}`}>
-                        {expense.category}
+                  <div key={expense.id} className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        {isEditMode ? (
+                          <select
+                            value={expense.category}
+                            onChange={(e) => handleExpenseChange(expense.id, 'category', e.target.value)}
+                            className="px-2 py-1 text-xs font-medium border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            {expenseCategories.map(cat => (
+                              <option key={cat.value} value={cat.value}>{cat.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className={`px-2.5 py-1 rounded-md text-xs font-medium ${getCategoryColor(expense.category)}`}>
+                            {expense.category}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          {isEditMode ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={expense.description}
+                                onChange={(e) => handleExpenseChange(expense.id, 'description', e.target.value)}
+                                className="w-full px-2 py-1 text-sm font-medium border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                              <input
+                                type="date"
+                                value={expense.date}
+                                onChange={(e) => handleExpenseChange(expense.id, 'date', e.target.value)}
+                                className="px-2 py-1 text-xs border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-gray-900">{expense.description}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{expense.date}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{expense.description}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{expense.date}</p>
+                      <div className="flex items-center space-x-3">
+                        {isEditMode ? (
+                          <div className="flex items-center">
+                            <span className="text-gray-500 mr-1">$</span>
+                            <input
+                              type="number"
+                              value={expense.amount}
+                              onChange={(e) => handleExpenseChange(expense.id, 'amount', Number(e.target.value))}
+                              className="w-24 px-2 py-1 text-sm font-semibold border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-base font-semibold text-gray-900">
+                            ${expense.amount.toLocaleString()}
+                          </span>
+                        )}
+                        {isEditMode && (
+                          <button 
+                            onClick={() => handleDeleteExpense(expense.id)}
+                            className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <span className="text-base font-semibold text-gray-900">
-                      ${expense.amount.toLocaleString()}
-                    </span>
                   </div>
                 ))}
               </div>
@@ -519,7 +710,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   Activity & Notes
                 </h2>
                 <button 
-                  onClick={handleAddNote}
+                  onClick={() => setShowAddNoteModal(true)}
                   className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -541,6 +732,14 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                       <p className="mt-1 text-sm text-gray-700 leading-relaxed">{note.content}</p>
                     </div>
+                    {isEditMode && (
+                      <button 
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -714,6 +913,154 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+      
+      {/* Add Expense Modal */}
+      {showAddExpenseModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={() => setShowAddExpenseModal(false)}
+                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <DollarSign className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Add New Expense
+                  </h3>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Category</label>
+                      <select
+                        value={newExpense.category}
+                        onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select a category</option>
+                        {expenseCategories.map(cat => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Amount</label>
+                      <div className="mt-1 relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input
+                          type="number"
+                          value={newExpense.amount}
+                          onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                          className="pl-8 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Description</label>
+                      <input
+                        type="text"
+                        value={newExpense.description}
+                        onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter description"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Date</label>
+                      <input
+                        type="date"
+                        value={newExpense.date}
+                        onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                        className="mt-1 block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={handleAddExpense}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Add Expense
+                </button>
+                <button
+                  onClick={() => setShowAddExpenseModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Note Modal */}
+      {showAddNoteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="absolute top-0 right-0 pt-4 pr-4">
+                <button
+                  onClick={() => setShowAddNoteModal(false)}
+                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Add New Note
+                  </h3>
+                  <div className="mt-4">
+                    <textarea
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      rows={4}
+                      className="block w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter your note here..."
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={handleAddNote}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Add Note
+                </button>
+                <button
+                  onClick={() => setShowAddNoteModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
