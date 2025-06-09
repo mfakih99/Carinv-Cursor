@@ -1,15 +1,218 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicles  Vehicle[]
+  notes     Note[]
+  documents Document[]
+  expenses  Expense[]
+}
+
+model Vehicle {
+  id                String   @id @default(cuid())
+  vin               String   @unique
+  make              String?
+  model             String?
+  year              Int?
+  trim              String?
+  bodyType          String?
+  color             String?
+  mileage           Int?
+  engineType        String?
+  transmission      String?
+  drivetrain        String?
+  status            VehicleStatus @default(AVAILABLE)
+  purchaseDate      DateTime?
+  purchasePrice     Decimal?
+  purchaseLocation  String?
+  listingPrice      Decimal?
+  soldDate          DateTime?
+  soldPrice         Decimal?
+  profit            Decimal?
+  location          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+
+  notes             Note[]
+  documents         Document[]
+  expenses          Expense[]
+  customFieldValues CustomFieldValue[]
+  photos            Photo[]
+  sales             Sale[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  name         String
+  type         DocumentType
+  url          String
+  size         Int?
+  mimeType     String?
+  uploadedAt   DateTime     @default(now())
+  vehicleId    String
+  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+}
+
+model Expense {
+  id          String       @id @default(cuid())
+  category    ExpenseCategory
+  amount      Decimal
+  description String?
+  date        DateTime
+  receiptUrl  String?
+  createdAt   DateTime     @default(now())
+  vehicleId   String
+  vehicle     Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  url       String
+  caption   String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String?  @unique
+  phone        String?
+  address      String?
+  city         String?
+  state        String?
+  zipCode      String?
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sales        Sale[]
+}
+
+model Sale {
+  id           String   @id @default(cuid())
+  saleDate     DateTime
+  salePrice    Decimal
+  paymentMethod String?
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  vehicleId    String
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+}
+
+model CustomField {
+  id           String      @id @default(cuid())
+  name         String
+  label        String
+  type         FieldType
+  required     Boolean     @default(false)
+  options      Json?       // For dropdown/select fields
+  validation   Json?       // Validation rules
+  order        Int         @default(0)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  values       CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id           String      @id @default(cuid())
+  value        String      @db.Text
+  vehicleId    String
+  vehicle      Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  fieldId      String
+  field        CustomField @relation(fields: [fieldId], references: [id])
+  
+  @@unique([vehicleId, fieldId])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_REPAIR
+  PENDING_SALE
+  SOLD
+  ARCHIVED
+}
+
+enum DocumentType {
+  TITLE
+  PURCHASE_AGREEMENT
+  INSPECTION_REPORT
+  REPAIR_INVOICE
+  INSURANCE
+  REGISTRATION
+  OTHER
+}
+
+enum ExpenseCategory {
+  PURCHASE
+  REPAIR
+  MAINTENANCE
+  TRANSPORTATION
+  DETAILING
+  PARTS
+  FEES
+  INSPECTION
+  OTHER
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  MULTISELECT
+  BOOLEAN
+  TEXTAREA
+  URL
+  EMAIL
+  PHONE
+} 
